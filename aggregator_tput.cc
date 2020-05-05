@@ -103,19 +103,38 @@ int main(int argc, char *argv[]){
     for(int i=0; i<threadnum; i++){
         result_thread[i]=result+i*(datasize/threadnum);
     }
-    auto begin = std::chrono::high_resolution_clock::now();
-    #pragma omp parallel for num_threads(threadnum)
-    for(int i=0; i<threadnum; i++){
-        aggregation(workernum, bnum[i], blocksize, indexs[i], values[i], result_thread[i]);
+    float microseconds=0;
+    float tput=0;
+    int num_rounds = 100;
+    for(int roundnum = 0; roundnum<num_rounds; roundnum++){
+        for(int i=0; i<datasize; i++){
+            result[i]=0.0;
+        }        
+        auto begin = std::chrono::high_resolution_clock::now();
+        #pragma omp parallel for num_threads(threadnum)
+        for(int i=0; i<threadnum; i++){
+            aggregation(workernum, bnum[i], blocksize, indexs[i], values[i], result_thread[i]);
+        }
+        auto end = std::chrono::high_resolution_clock::now();
+        auto tmptime = (float)std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
+        microseconds += tmptime;
+        tput += float((long long)(datasize)*4*8*(long long)(workernum))/tmptime/1000;
     }
-    auto end = std::chrono::high_resolution_clock::now();
 #ifdef DEBUG
     for(int i=0; i<datasize; i++){
         std::cout<<result[i]<<" ";
     }
     std::cout<<std::endl;
 #endif
-    float microseconds = (float)std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
-    std::cout<<"number of threads: "<<threadnum<<"; data size: "<<datasize<<"; throughput: "<<float((long long)(datasize)*4*8*(long long)(workernum))/microseconds/1000<< "Gbps" <<std::endl;
+    std::cout<<"number of threads: "<<threadnum<<"; data size: "<<datasize<<"; throughput: "<<tput/num_rounds<< "Gbps;"<<" time: "<<microseconds/num_rounds<<std::endl;
+    
+    for(int i=0; i<threadnum; i++){
+        free(bnum[i]);
+        for(int j=0; j<workernum; j++){
+            free(indexs[i][j]);
+            free(values[i][j]);
+        }
+    }
+    free(result);
     return 0;
 }
