@@ -1,8 +1,6 @@
-server: server-multithread.c client-multithread.c
-	cc server-multithread.c -o mserver -g -libverbs -pthread
-	cc client-multithread.c -o mclient -g -libverbs -pthread
-	g++ -O3 -fopenmp aggregator_tput.cc -o aggregator
+server: testclient.cc testserver.cc
+	g++ server.cc -o server -g -libverbs -pthread
+	g++ client.cc -o client -g -libverbs -pthread
 clean:
-	rm -rf ./*.o ./mclient
-	rm -rf ./*.o ./mserver
-	rm -rf ./*.o ./aggregator
+	rm -rf ./*.o ./client
+	rm -rf ./*.o ./server
